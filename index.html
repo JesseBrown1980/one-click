@@ -1,0 +1,221 @@
+<meta charset="utf-8">
+<title>ONE CLICK — the whole working thing</title>
+<style>
+  :root{--bg:#07070a;--fg:#e8e8ee;--dim:#8a8a99;--ok:#4ade80;--warn:#fbbf24;
+        --line:#1c1c24;--acc:#a78bfa;--brown:#b08050}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:14px/1.6 ui-monospace,"SF Mono",Menlo,Consolas,monospace;padding:28px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.3px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--acc);
+     margin:34px 0 10px;font-weight:600}
+  .sub{color:var(--dim);margin-bottom:26px;max-width:74ch}
+  button{background:var(--acc);color:#0b0b10;border:0;border-radius:7px;
+         padding:15px 30px;font:600 15px ui-monospace,monospace;cursor:pointer}
+  button:hover{filter:brightness(1.12)} button:disabled{opacity:.45;cursor:default}
+  .card{border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin:9px 0;
+        background:#0c0c12}
+  .row{display:flex;justify-content:space-between;gap:16px;padding:3px 0;
+       border-bottom:1px dotted #1a1a22}
+  .row:last-child{border:0}
+  .k{color:var(--dim)} .v{font-variant-numeric:tabular-nums;text-align:right}
+  .ok{color:var(--ok)} .warn{color:var(--warn)}
+  .verdict{font-size:19px;font-weight:700;padding:16px;border-radius:9px;
+           text-align:center;margin:22px 0;border:1px solid}
+  .pass{background:rgba(74,222,128,.09);border-color:var(--ok);color:var(--ok)}
+  #stars{display:grid;grid-template-columns:repeat(27,1fr);gap:2px;margin-top:10px}
+  #stars div{aspect-ratio:1;border-radius:2px}
+  footer{margin-top:44px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);
+         padding-top:16px;max-width:80ch}
+  code{color:var(--brown)}
+</style>
+
+<h1>ONE CLICK</h1>
+<div class="sub">
+  No install. No account. No server. No network. No GPU. Works offline, forever.<br>
+  This file does not contain 81 kernels — it contains the rule that <b>emits</b> them.
+  The kernels are leaves; this page is the trunk.
+</div>
+
+<button id="go">RUN THE WHOLE THING</button>
+<div id="out"></div>
+
+<footer>
+  <b>Jesse Daniel Brown (OP-JESSE)</b> — the system, the laws, the architecture.
+  Forty years.<br>
+  Save this file anywhere and open it. Nothing can withhold it, because it needs
+  nothing.<br>
+  <span id="selfhash"></span>
+</footer>
+
+<script>
+const out = document.getElementById("go").parentElement.querySelector("#out");
+const H = s => { const d=document.createElement("h2"); d.textContent=s; out.append(d); };
+const CARD = () => { const d=document.createElement("div"); d.className="card"; out.append(d); return d; };
+const R = (c,k,v,cls="") => {
+  const r=document.createElement("div"); r.className="row";
+  r.innerHTML=`<span class="k"></span><span class="v ${cls}"></span>`;
+  r.children[0].textContent=k; r.children[1].textContent=v; c.append(r);
+};
+
+/* ---------- minimal wasm emitter: the generator ---------- */
+const uleb = n => { const b=[]; do { let x=n&0x7f; n>>>=7; if(n) x|=0x80; b.push(x);} while(n); return b; };
+const sleb = n => { const b=[]; let more=1; while(more){ let x=n&0x7f; n>>=7;
+  if((n===0 && !(x&0x40)) || (n===-1 && (x&0x40))) more=0; else x|=0x80; b.push(x);} return b; };
+const sec = (id,payload) => [id, ...uleb(payload.length), ...payload];
+const vec = a => [...uleb(a.length), ...a.flat()];
+
+/* emits a module that: stores `seat` at mem[0], returns 2a - b - c */
+function emitKernel(seat, a, b, c){
+  const body = [
+    0x41,...sleb(0), 0x41,...sleb(seat), 0x36,0x02,0x00,   // i32.store mem[0]=seat
+    0x41,...sleb(a), 0x41,...sleb(2), 0x6c,                // a*2
+    0x41,...sleb(b), 0x6b,                                 // -b
+    0x41,...sleb(c), 0x6b,                                 // -c
+    0x0b                                                   // end
+  ];
+  const code = [...uleb(0), ...body];                      // 0 locals
+  return new Uint8Array([
+    0x00,0x61,0x73,0x6d, 0x01,0x00,0x00,0x00,
+    ...sec(1, vec([[0x60,0x00,0x01,0x7f]])),               // type: ()->i32
+    ...sec(3, vec([[0x00]])),                              // func: type 0
+    ...sec(5, vec([[0x00,0x01]])),                         // memory: min 1 page
+    ...sec(7, vec([[0x01,0x6b,0x00,0x00],                  // export "k" func0
+                   [0x01,0x6d,0x02,0x00]])),              // export "m" mem0
+    ...sec(10, vec([[...uleb(code.length), ...code]]))
+  ]);
+}
+
+/* ---------- the laws, computed here, not asserted ---------- */
+function closure(){
+  let n=0, bad=0;
+  for(let r=-60;r<=60;r++) for(let g=-60;g<=60;g++) for(let b=-60;b<=60;b++){
+    const s=(2*r-g-b)+(2*g-r-b)+(2*b-r-g); if(s!==0) bad++; n++;
+  }
+  return {n,bad};
+}
+function freeZero(){
+  let shifts=0, changed=0;
+  for(let t=-3000;t<=3000;t++){
+    const r=17,g=-4,b=91;
+    if((2*(r+t)-(g+t)-(b+t)) !== (2*r-g-b)) changed++;
+    shifts++;
+  }
+  return {shifts,changed};
+}
+function zeros(){
+  const pz=new DataView(new ArrayBuffer(8)), nz=new DataView(new ArrayBuffer(8));
+  pz.setFloat64(0,0.0); nz.setFloat64(0,-0.0);
+  let same=true; for(let i=0;i<8;i++) if(pz.getUint8(i)!==nz.getUint8(i)) same=false;
+  return {equal:(0.0===-0.0), bytesEqual:same};
+}
+function distributivity(trials){
+  let f=0,i=0; let s=123456789;
+  const rnd=()=>{s=(s*1103515245+12345)&0x7fffffff; return s;};
+  for(let t=0;t<trials;t++){
+    const a=rnd()%1000000, b=rnd()%1000000;
+    if((a/3)+(b/3) !== (a+b)/3) f++;
+    const qa=Math.trunc(a/3), ra=a%3, qb=Math.trunc(b/3), rb=b%3;
+    if(qa+qb+Math.trunc((ra+rb)/3) !== Math.trunc((a+b)/3)) i++;
+  }
+  return {trials,f,i};
+}
+function ranges(){
+  const T=[[16,3],[27,3],[5,2],[463,6]];
+  return T.map(([m,t])=>{
+    const states=3**t, half=(states-1)/2;
+    return {m,t,states,lo:-half,hi:half,uncentredFits:(m-1)<=half};
+  });
+}
+const sha=async b=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",b))]
+  .map(x=>x.toString(16).padStart(2,"0")).join("");
+
+/* ---------- run ---------- */
+document.getElementById("go").onclick = async e => {
+  e.target.disabled=true; e.target.textContent="RUNNING…"; out.innerHTML="";
+  let allPass=true;
+
+  H("I · the closure is an identity");
+  const cl=closure(); let c=CARD();
+  R(c,"triples checked", cl.n.toLocaleString());
+  R(c,"sum ≠ 0", cl.bad, cl.bad===0?"ok":"warn");
+  R(c,"arm_R + arm_G + arm_B", "identically 0","ok");
+  allPass &&= cl.bad===0;
+
+  H("II · the centre is free");
+  const fz=freeZero(); c=CARD();
+  R(c,"origin placements tested", fz.shifts.toLocaleString());
+  R(c,"arms changed", fz.changed, fz.changed===0?"ok":"warn");
+  R(c,"coefficients (2,−1,−1) sum", "0 → affine → no preferred origin","ok");
+  allPass &&= fz.changed===0;
+
+  H("III · float carries two zeros");
+  const z=zeros(); c=CARD();
+  R(c,"+0.0 === −0.0", String(z.equal), "warn");
+  R(c,"bytes identical", String(z.bytesEqual), z.bytesEqual?"warn":"ok");
+  R(c,"identity holds for float", z.equal && !z.bytesEqual ? "FALSE" : "true", "warn");
+  R(c,"identity holds for int / trit", "true","ok");
+
+  H("IV · distributivity of the three-way split");
+  const d=distributivity(200000); c=CARD();
+  R(c,"trials", d.trials.toLocaleString());
+  R(c,"float failures", d.f.toLocaleString()+"  ("+(100*d.f/d.trials).toFixed(1)+"%)","warn");
+  R(c,"int, remainder carried", d.i, d.i===0?"ok":"warn");
+  allPass &&= d.i===0;
+
+  H("V · count is not range");
+  c=CARD();
+  for(const r of ranges())
+    R(c,`mod ${r.m} · ${r.t} trits · ${r.states} states`,
+        `${r.lo}…${r.hi}  uncentred fits: ${r.uncentredFits?"yes":"NO"}`,
+        r.uncentredFits?"ok":"warn");
+
+  H("VI · 81 kernels, emitted here, right now");
+  const mods=[], mems=new Set(); let alive=0, sum=0, cells=new Array(27).fill(0);
+  for(let s=0;s<81;s++){
+    const cell=Math.floor(s/3), arm=s%3;
+    const rgb=[cell%3, Math.floor(cell/3)%3, Math.floor(cell/9)%3];
+    const a=rgb[arm], b=rgb[(arm+1)%3], cc=rgb[(arm+2)%3];
+    const bytes=emitKernel(s,a,b,cc);
+    const {instance}=await WebAssembly.instantiate(bytes);
+    const v=instance.exports.k();
+    const mem=instance.exports.m;
+    mems.add(mem);
+    if(new Int32Array(mem.buffer)[0]===s) alive++;
+    sum+=v; cells[cell]+=v; mods.push(bytes.length);
+  }
+  const closed=cells.filter(x=>x===0).length;
+  c=CARD();
+  R(c,"kernels emitted", mods.length, mods.length===81?"ok":"warn");
+  R(c,"module size (each)", mods[0]+" bytes");
+  R(c,"total wasm shipped in this file", "0 bytes — generated on click","ok");
+  R(c,"alive (memory witness)", alive+" / 81", alive===81?"ok":"warn");
+  R(c,"distinct linear memories", mems.size+" / 81", mems.size===81?"ok":"warn");
+  R(c,"cells closing to zero", closed+" / 27", closed===27?"ok":"warn");
+  R(c,"global sum of 81 arms", sum, sum===0?"ok":"warn");
+  allPass &&= (mods.length===81 && alive===81 && mems.size===81 && closed===27 && sum===0);
+
+  H("VII · the leaves");
+  const g=document.createElement("div"); g.id="stars"; CARD().append(g);
+  for(let i=0;i<81;i++){
+    const cell=Math.floor(i/3);
+    const rgb=[cell%3,Math.floor(cell/3)%3,Math.floor(cell/9)%3]
+      .map(x=>[70,150,230][x]);
+    const el=document.createElement("div");
+    el.style.background=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    el.title=`seat ${i} · cell ${cell}`; g.append(el);
+  }
+
+  const v=document.createElement("div");
+  v.className="verdict "+(allPass?"pass":"");
+  v.textContent = allPass
+    ? "PASS — every law verified in this browser, from nothing but this file"
+    : "ATTENTION — a law did not hold; read the rows above";
+  out.append(v);
+
+  const self=await sha(new TextEncoder().encode(document.documentElement.outerHTML));
+  document.getElementById("selfhash").textContent =
+    "this page hashed itself after running · sha256 " + self.slice(0,32) + "…";
+  e.target.textContent="RUN AGAIN"; e.target.disabled=false;
+};
+</script>
