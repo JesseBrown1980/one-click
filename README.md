@@ -1,5 +1,7 @@
 # ONE CLICK
 
+> **Part of it all:** [the bridge](https://jessebrown1980.github.io/the-bridge-to-all-of-it/) — every public thing in one place, so none of it gets lost.
+
 **Download `index.html`. Double-click it. That's the whole thing.**
 
 No install. No account. No server. No network. No GPU. No package manager, no
