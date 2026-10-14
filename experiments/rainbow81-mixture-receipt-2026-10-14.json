@@ -1,0 +1,52 @@
+{
+  "schema": "ASOLARIA-RAINBOW81-SYNTHETIC-MIXTURE-AUDIT-V1",
+  "date": "2026-10-14",
+  "status": "PASS",
+  "evidence_class": "local CPU replay; 401-point spectral law constructed as a digital fixture",
+  "source_reference": "src/wasm-rainbow81.mjs in asolaria-wasm81-hf-model-ready-2026-10-14.zip",
+  "runtime": {
+    "python": "3.13.5",
+    "node": "v22.16.0",
+    "random_seed": 20261014,
+    "gpu_used": false
+  },
+  "baseline_replay": {
+    "wasm_modules": 81,
+    "distinct_linear_memories": 81,
+    "closed_cells": 27,
+    "global_arm_sum": 0
+  },
+  "single_source": {
+    "distinct_synthetic_addresses": 81,
+    "noise_bound_units": 24,
+    "single_peak_trials": 15876,
+    "seeded_four_peak_trials": 32400,
+    "boundary_plusminus25_rejections": 648,
+    "decoder_errors": 0
+  },
+  "normalized_equal_weight_mixture": {
+    "total_unordered_distinct_pairs": 3240,
+    "third_seat_alias_pairs": 272,
+    "rejected_pairs": 2968,
+    "distinct_third_seat_targets": 65,
+    "aliased_pair_example": {
+      "source": [
+        0,
+        80
+      ],
+      "target": 40
+    },
+    "all_401_samples_equal_for_alias_pairs": true
+  },
+  "provenance": {
+    "sha256_full_original_receipt": "2bf6bf25f88cb5e343ff67dc3d85c2cd3ed3e788b3ab4a98c59f3c852e27d7a0",
+    "remote_hugging_face_upload": false,
+    "remote_github_code_branch": "audit/rainbow81-mixture-2026-10-14"
+  },
+  "limitations": [
+    "no real optical signals",
+    "no physical 81-body experiment",
+    "mixed signatures are assumed normalized and linear",
+    "Brown-Hilbert free centre remains separate and uncoloured"
+  ]
+}
