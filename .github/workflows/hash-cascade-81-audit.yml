@@ -1,0 +1,27 @@
+name: Asolaria 81 hash cascade audit
+
+on:
+  push:
+    branches:
+      - audit/rainbow81-mixture-2026-10-14
+    paths:
+      - experiments/hash-cascade-81-2026-10-14.py
+      - .github/workflows/hash-cascade-81-audit.yml
+  pull_request:
+    paths:
+      - experiments/hash-cascade-81-2026-10-14.py
+
+jobs:
+  cascade:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python experiments/hash-cascade-81-2026-10-14.py
