@@ -1,0 +1,70 @@
+name: Mirror Rainbow81 branch audit to Hugging Face
+
+on:
+  push:
+    branches:
+      - audit/rainbow81-mixture-2026-10-14
+    paths:
+      - experiments/rainbow81-mixture-2026-10-14.py
+      - experiments/rainbow81-mixture-receipt-2026-10-14.json
+      - experiments/README-rainbow81-2026-10-14.md
+      - .github/workflows/rainbow81-hf-mirror.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-audit:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_REPO: Jessedbrown/asolaria-wasm81-rainbow-audit
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether HF_TOKEN is configured
+        id: auth
+        shell: bash
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'No HF_TOKEN repository secret; skipping mirror. Add it under repository Settings > Secrets and variables > Actions.'
+          fi
+      - name: Build a branch-scoped, token-free mirror
+        if: steps.auth.outputs.available == 'true'
+        shell: bash
+        run: |
+          mkdir -p mirror-staging/experiments mirror-staging/workflows
+          cp experiments/rainbow81-mixture-2026-10-14.py mirror-staging/experiments/
+          cp experiments/rainbow81-mixture-receipt-2026-10-14.json mirror-staging/experiments/
+          cp experiments/README-rainbow81-2026-10-14.md mirror-staging/experiments/
+          cp .github/workflows/rainbow81-mixture-audit.yml mirror-staging/workflows/
+          cp .github/workflows/rainbow81-hf-mirror.yml mirror-staging/workflows/
+          python - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path('mirror-staging/PROVENANCE.json')
+          data={
+            'schema':'ASOLARIA-RAINBOW81-ONE-CLICK-GITHUB-MIRROR-V1',
+            'source_repo':os.environ['GITHUB_REPOSITORY'],
+            'source_ref':os.environ['GITHUB_REF_NAME'],
+            'source_commit':os.environ['GITHUB_SHA'],
+            'target':'https://huggingface.co/Jessedbrown/asolaria-wasm81-rainbow-audit',
+            'scope':'GitHub branch mixture-audit files only; not the complete 54-file local research archive',
+            'synthetic_only':True,
+            'physical_spectra_measured':False,
+            'energy_measured':False,
+            'original_wasm_modified':False
+          }
+          p.write_text(json.dumps(data,indent=2,sort_keys=True)+'\n')
+          PY
+      - name: Publish audit subfolder to Hugging Face model repository
+        if: steps.auth.outputs.available == 'true'
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check 'huggingface_hub>=0.30'
+          hf upload "$HF_REPO" mirror-staging audits/one-click --repo-type model --commit-message "Mirror one-click Rainbow81 audit at ${GITHUB_SHA}"
+      - name: Explain publication scope
+        if: steps.auth.outputs.available == 'true'
+        run: echo 'Published only audits/one-click; independently prepared 54-file research bundle is not included.'
