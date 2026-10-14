@@ -1,0 +1,35 @@
+name: Asolaria spatial hash 27 waves independent CI
+
+on:
+  push:
+    branches:
+      - audit/rainbow81-mixture-2026-10-14
+    paths:
+      - experiments/test_spatial_hash_27_waves_ci.py
+      - .github/workflows/spatial-hash-27-branch-audit.yml
+  pull_request:
+    paths:
+      - experiments/test_spatial_hash_27_waves_ci.py
+
+permissions:
+  contents: read
+
+jobs:
+  verify-27-waves:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run 27-wave spatial-vs-hash controls
+        run: python experiments/test_spatial_hash_27_waves_ci.py > spatial-hash-ci.json
+      - name: Output check
+        run: cat spatial-hash-ci.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spatial-hash-ci-${{ matrix.python-version }}
+          path: spatial-hash-ci.json
